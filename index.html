@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+	  <meta name="author" content="Cresas -Emre">
+    <title>Ohm Yasası Simülasyonu</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+    <script>
+        // Fallback Chart.js 
+        if (typeof Chart === 'undefined') {
+            console.log('Chart.js not found, trying alternative CDN...');
+            var script = document.createElement('script');
+            script.src = 'https://unpkg.com/chart.js@4.4.0/dist/chart.umd.js';
+            script.onload = function() {
+                console.log('Chart.js loaded from fallback CDN');
+                if (typeof initChart === 'function') {
+                    initChart();
+                }
+            };
+            document.head.appendChild(script);
+        }
+    </script>
+</head>
+<body>
+    <!--  Container -->
+    <div id="toast-container"></div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="header-left">
+                    <div class="header-icon">
+                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="header-title">Ohm Yasası Simülasyonu</h1>
+                        <p class="header-subtitle">Potansiyel fark ve akım arasındaki ilişkiyi keşfedin</p>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <button id="user-guide-btn" class="btn btn-outline">
+                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Kullanım Kılavuzu
+                    </button>
+                    <div class="badge badge-outline">
+                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                        </svg>
+                        10. Sınıf Fizik
+                    </div>
+                    <div class="badge badge-secondary">
+                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        FİZ.10.3.3
+                    </div>
+                    <div class="theme-toggle">
+                        <button class="btn btn-sm btn-outline" id="themeToggle">
+                            <span id="themeIcon">🌙</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container main-content">
+        <div class="grid grid-cols-1 lg:grid-cols-2" style="gap: 2rem;">
+            <!-- Left Panel - Circuit Simulation -->
+            <div class="col-left space-y-6">
+                <!-- Circuit -->
+                <div class="card">
+                    <h2 class="card-title">
+                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                        Elektrik Devresi
+                    </h2>
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Circuit Visualization -->
+                        <div class="lg:col-span-2">
+                            <div id="circuit-container" class="circuit-grid relative w-full" style="height: 31.2rem; background: hsl(var(--muted) / 0.1); border-radius: var(--radius); padding: 1.5rem;">
+                                <!-- SVG will be rendered by JavaScript -->
+                                <!-- Circuit will be dynamically generated here -->
+                            </div>
+                        </div>
+                        
+                        <!-- Information Panel -->
+                        <div class="space-y-4">
+                            <!-- Anlık Değerler -->
+                            <div class="circuit-info-panel">
+                                <div class="circuit-info-title flex items-center gap-2" style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <span class="w-2 h-2 rounded-full" style="background: var(--primary);"></span>
+                                    Anlık Değerler
+                                </div>
+                                <div id="instant-values" class="text-sm space-y-2" style="font-size: 0.875rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                                    <div style="color: hsl(0, 75%, 55%);">Kaynak Voltajı: <span id="source-voltage">5</span> V</div>
+                                    <div style="color: hsl(160, 85%, 45%);">Ana Akım: <span id="main-current">0.278</span> A</div>
+                                    <div style="color: hsl(25, 65%, 45%);">Direnç: <span id="main-resistance">10</span> Ω</div>
+                                    <div class="text-muted-foreground">Lamba: 8 Ω</div>
+                                    <div class="text-primary">Voltmetre: <span id="voltmeter-reading">0.00</span> V</div>
+                                    <div class="text-xs text-muted-foreground mt-2" id="probe-status">
+                                        0/2 prob bağlı
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Ohm Yasası -->
+                            <div class="circuit-info-panel text-sm">
+                                <div class="circuit-info-title text-primary flex items-center gap-2" style="font-weight: 600; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
+                                    <span>⚡</span>
+                                    Ohm Yasası
+                                </div>
+                                <div class="font-mono text-center mb-2 text-lg" style="font-family: monospace; text-align: center; margin-bottom: 0.5rem; font-size: 1.125rem;">V = I × R</div>
+                                <div class="font-mono text-xs text-center text-muted-foreground" id="ohm-formula" style="font-family: monospace; font-size: 0.75rem; text-align: center; color: var(--muted-foreground);">
+                                    5 = 0.278 × 18
+                                </div>
+                            </div>
+
+                            <!-- Kullanım -->
+                            <div class="circuit-info-panel text-sm">
+                                <div class="circuit-info-title flex items-center gap-2" style="font-weight: 600; display: flex; align-items: center; gap: 0.5rem;">
+                                    <span>📖</span>
+                                    Kullanım
+                                </div>
+                                <div class="space-y-2 text-xs text-muted-foreground" style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.75rem; color: var(--muted-foreground);">
+                                    <p>• Voltmetre problarını sürükleyerek tel üzerine bağlayın</p>
+                                    <p>• Kırmızı prob (+) potansiyeli, siyah prob (-) potansiyeli ölçer</p>
+                                    <p>• Probların yerini değiştirerek ters işaretli değer alabilirsiniz</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Control Panel -->
+                <div class="card">
+                    <h2 class="card-title">Kontrol Paneli</h2>
+                    <div id="control-panel" class="control-panel">
+                        <!-- Alert messages -->
+                        <div id="alerts-container"></div>
+
+                        <div class="grid-2">
+                            <!-- Voltage Control -->
+                            <div class="control-card">
+                                <div class="control-header">
+                                    <label class="label">Potansiyel Fark (Gerilim)</label>
+                                    <div class="badge badge-voltage"><span id="voltage-display">5</span> Volt</div>
+                                </div>
+                                <div class="control-input-row">
+                                    <input type="number" id="voltage-input" min="0.5" max="20" step="0.1" value="5" class="input">
+                                    <span class="input-label">Volt</span>
+                                </div>
+                                <input type="range" id="voltage-slider" min="0.5" max="20" step="0.5" value="5" class="slider">
+                                <div class="slider-labels">
+                                    <span>0.5V</span>
+                                    <span>Düşük</span>
+                                    <span>Orta</span>
+                                    <span>Yüksek</span>
+                                    <span>20V</span>
+                                </div>
+                                <div class="btn-group">
+                                    <button class="btn btn-sm btn-outline voltage-preset" data-value="3">3V</button>
+                                    <button class="btn btn-sm btn-outline voltage-preset" data-value="9">9V</button>
+                                    <button class="btn btn-sm btn-outline voltage-preset" data-value="12">12V</button>
+                                </div>
+                            </div>
+
+                            <!-- Resistance Control -->
+                            <div class="control-card">
+                                <div class="control-header">
+                                    <label class="label">Ayarlı Direnç (Reosta)</label>
+                                    <div class="badge badge-resistance"><span id="resistance-display">10</span> Ohm</div>
+                                </div>
+                                <div class="control-input-row">
+                                    <input type="number" id="resistance-input" min="1" max="100" step="1" value="10" class="input">
+                                    <select id="resistance-preset" class="select">
+                                        <option value="1">1Ω - Çok düşük direnç</option>
+                                        <option value="5">5Ω - Düşük direnç</option>
+                                        <option value="10" selected>10Ω - Orta direnç</option>
+                                        <option value="20">20Ω - Yüksek direnç</option>
+                                        <option value="50">50Ω - Çok yüksek direnç</option>
+                                    </select>
+                                </div>
+                                <input type="range" id="resistance-slider" min="1" max="100" step="1" value="10" class="slider">
+                                <div class="slider-labels">
+                                    <span>1Ω</span>
+                                    <span>25Ω</span>
+                                    <span>50Ω</span>
+                                    <span>75Ω</span>
+                                    <span>100Ω</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Calculated Values -->
+                        <div class="calc-values-card">
+                            <h3 class="calc-title">
+                                <span class="indicator"></span>
+                                Hesaplanan Değerler
+                            </h3>
+                            <div class="calc-grid">
+                                <div class="calc-box calc-current">
+                                    <div class="calc-value" id="current-value">0.278</div>
+                                    <div class="calc-label">Akım (Amper)</div>
+                                    <div class="calc-formula">I = V ÷ R</div>
+                                </div>
+                                <div class="calc-box calc-resistance-total">
+                                    <div class="calc-value" id="total-resistance-value">18</div>
+                                    <div class="calc-label">Direnç (Ohm)</div>
+                                    <div class="calc-formula">R = V ÷ I</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Measurement Controls -->
+                        <div class="control-card">
+                            <h3 class="label">Veri Toplama</h3>
+                            <div class="btn-row">
+                                <button id="add-measurement-btn" class="btn btn-primary">
+                                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                                    </svg>
+                                    Ölçüm Ekle
+                                </button>
+                                <button id="reset-btn" class="btn btn-outline">
+                                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                    </svg>
+                                    Sıfırla
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel - Data and Analysis -->
+            <div class="col-right space-y-6">
+                <!-- Data Table -->
+                <div class="card">
+                    <h3 class="card-subtitle">Ölçüm Verileri</h3>
+                    <div id="data-table-container"></div>
+                </div>
+
+                <!-- V-I Chart -->
+                <div class="card">
+                    <h3 class="card-subtitle">V-I Grafiği</h3>
+                    <div id="chart-container">
+                        <canvas id="vi-chart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Export Tools -->
+                <div class="card">
+                    <div class="export-header">
+                        <h3 class="export-title">
+                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                            </svg>
+                            PDF Rapor
+                        </h3>
+                        <div class="badge badge-outline" id="export-count">0 veri</div>
+                    </div>
+                    <button id="export-pdf-btn" class="btn btn-outline btn-full">
+                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        PDF Raporu Oluştur
+                    </button>
+                    <div id="export-success-msg" class="export-success" style="display: none;">
+                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <div>
+                            <div class="success-title">Harika!</div>
+                            <div class="success-text">Yeterli veri topladınız. Artık PDF raporunuzu oluşturup sonuçlarınızı inceleyebilirsiniz.</div>
+                        </div>
+                    </div>
+                    <div class="export-info">
+                        <p><strong>PDF Raporu:</strong> Deney raporunuzu PDF formatında indirip yazdırabilirsiniz.</p>
+                    </div>
+                </div>
+
+                <!-- Student Notes -->
+                <div class="card">
+                    <div class="notes-header">
+                        <h3 class="notes-title">
+                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                            </svg>
+                            Öğrenci Notları
+                        </h3>
+                        <div class="notes-badges">
+                            <div id="unsaved-badge" class="badge badge-warning" style="display: none;">Kaydedilmedi</div>
+                            <div id="saved-time-badge" class="badge badge-outline" style="display: none;"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="notes-guide">
+                        <h4 class="notes-guide-title">
+                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                            </svg>
+                            Düşünmenize Yardımcı Sorular
+                        </h4>
+                        <ul class="notes-guide-list">
+                            <li><span>•</span> Gerilimi arttırdığınızda akımda ne gözlemlediniz?</li>
+                            <li><span>•</span> Direnç değiştirdiğinizde akım nasıl etkilendi?</li>
+                            <li><span>•</span> V-I grafiğindeki doğrusal ilişki ne anlama geliyor?</li>
+                            <li><span>•</span> Bu deney sonucunda Ohm Yasası'nı nasıl açıklarsınız?</li>
+                        </ul>
+                    </div>
+
+                    <div class="notes-input-section">
+                        <label class="label">Gözlemlerimiz ve Sonuçlarımız:</label>
+                        <textarea id="student-notes" class="textarea" maxlength="1000" placeholder="Deneyde gözlemlediklerimizi, çıkardığımız sonuçları ve Ohm Yasası hakkındaki düşüncelerimizi buraya yazalım...
+
+Örnek başlangıç:
+• Gerilimi 3V'tan 12V'a çıkardığımızda akım da ...
+• En ilginç bulduğumuz sonuç ...
+• Ohm Yasası gerçek hayatta nerede kullanılır? ..."></textarea>
+                        <div class="notes-footer">
+                            <span id="char-count" class="char-count">0/1000 karakter</span>
+                            <div id="char-badge" class="badge badge-primary" style="display: none;">Güzel! Detaylı not alıyoruz</div>
+                        </div>
+                    </div>
+
+                    <div class="notes-buttons">
+                        <button id="save-notes-btn" class="btn btn-primary flex-1">
+                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
+                            </svg>
+                            Kaydet
+                        </button>
+                        <button id="clear-notes-btn" class="btn btn-outline">
+                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div id="self-eval" class="self-eval" style="display: none;">
+                        <h4 class="self-eval-title">Öz Değerlendirme Soruları:</h4>
+                        <div class="self-eval-questions">
+                            <p>✓ Ohm Yasası'nı (V = I × R) kendi kelimelerimizle açıklayabilir miyiz?</p>
+                            <p>✓ Bu ilişkiyi günlük hayattan bir örnekle açıklayabilir miyiz?</p>
+                            <p>✓ Grafikten hangi sonuçları çıkardık?</p>
+                            <p>✓ Hipotezimiz doğru çıktı mı? Neden?</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Author : Cresas - Emre -->
+    <div id="user-guide-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">
+                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Ohm Yasası Simülasyonu - Kullanım Kılavuzu
+                </h2>
+                <button class="modal-close" id="close-guide-btn">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body" id="user-guide-content"></div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
