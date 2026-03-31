@@ -396,7 +396,7 @@ function initCircuit() {
     // Clear any existing content
     // Create SVG
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('viewBox', '0 0 500 350');
+    svg.setAttribute('viewBox', '0 0 470 350');
     svg.style.width = '100%';
     svg.style.height = '100%';
     svg.style.cursor = 'default';
@@ -407,22 +407,28 @@ function initCircuit() {
     // Dragging state
     let dragging = null;
     
-    // Event handlers
+    // Event handlers - Mouse
     svg.addEventListener('mousedown', handleMouseDown);
     svg.addEventListener('mousemove', handleMouseMove);
     svg.addEventListener('mouseup', handleMouseUp);
     svg.addEventListener('mouseleave', handleMouseUp);
+
+    // Event handlers - Touch (Mobile support)
+    svg.addEventListener('touchstart', handleTouchStart, { passive: false });
+    svg.addEventListener('touchmove', handleTouchMove, { passive: false });
+    svg.addEventListener('touchend', handleTouchEnd);
+    svg.addEventListener('touchcancel', handleTouchEnd);
     
     function handleMouseDown(e) {
         const rect = svg.getBoundingClientRect();
-        const x = (e.clientX - rect.left) * (500 / rect.width);
+        const x = (e.clientX - rect.left) * (470 / rect.width);
         const y = (e.clientY - rect.top) * (350 / rect.height);
-        
+
         // Check if clicking on a probe
         const state = store.getState();
         const redProbe = state.probes.red;
         const blackProbe = state.probes.black;
-        
+
         if (Math.hypot(x - redProbe.x, y - redProbe.y) < 15) {
             dragging = 'red';
             e.preventDefault();
@@ -437,16 +443,16 @@ function initCircuit() {
             e.preventDefault();
         }
     }
-    
+
     function handleMouseMove(e) {
         if (!dragging) return;
-        
+
         const rect = svg.getBoundingClientRect();
         const x = (e.clientX - rect.left) * (500 / rect.width);
         const y = (e.clientY - rect.top) * (350 / rect.height);
-        
+
         const state = store.getState();
-        
+
         if (dragging === 'red' || dragging === 'black') {
             const newProbes = { ...state.probes };
             newProbes[dragging] = { ...newProbes[dragging], x, y };
@@ -457,12 +463,12 @@ function initCircuit() {
             store.setState({ ammeterDevice: { x: Math.max(0, Math.min(450, x)), y: Math.max(0, Math.min(310, y)) } });
         }
     }
-    
+
     function handleMouseUp() {
         if (dragging === 'red' || dragging === 'black') {
             const state = store.getState();
             const probe = state.probes[dragging];
-            
+
             if (isPointOnWire(probe.x, probe.y)) {
                 const newProbes = { ...state.probes };
                 newProbes[dragging] = {
@@ -476,7 +482,81 @@ function initCircuit() {
                 store.setState({ probes: newProbes });
             }
         }
-        
+
+        dragging = null;
+    }
+
+    // Touch event handlers for mobile support
+    function handleTouchStart(e) {
+        if (e.touches.length !== 1) return;
+
+        const touch = e.touches[0];
+        const rect = svg.getBoundingClientRect();
+        const x = (touch.clientX - rect.left) * (470 / rect.width);
+        const y = (touch.clientY - rect.top) * (350 / rect.height);
+
+        // Check if touching a probe
+        const state = store.getState();
+        const redProbe = state.probes.red;
+        const blackProbe = state.probes.black;
+
+        if (Math.hypot(x - redProbe.x, y - redProbe.y) < 20) {
+            dragging = 'red';
+            e.preventDefault();
+        } else if (Math.hypot(x - blackProbe.x, y - blackProbe.y) < 20) {
+            dragging = 'black';
+            e.preventDefault();
+        } else if (Math.hypot(x - state.voltmeterDevice.x - 40, y - state.voltmeterDevice.y - 25) < 40) {
+            dragging = 'voltmeter';
+            e.preventDefault();
+        } else if (Math.hypot(x - state.ammeterDevice.x - 25, y - state.ammeterDevice.y - 20) < 35) {
+            dragging = 'ammeter';
+            e.preventDefault();
+        }
+    }
+
+    function handleTouchMove(e) {
+        if (!dragging || e.touches.length !== 1) return;
+
+        e.preventDefault();
+
+        const touch = e.touches[0];
+        const rect = svg.getBoundingClientRect();
+        const x = (touch.clientX - rect.left) * (500 / rect.width);
+        const y = (touch.clientY - rect.top) * (350 / rect.height);
+
+        const state = store.getState();
+
+        if (dragging === 'red' || dragging === 'black') {
+            const newProbes = { ...state.probes };
+            newProbes[dragging] = { ...newProbes[dragging], x, y };
+            store.setState({ probes: newProbes });
+        } else if (dragging === 'voltmeter') {
+            store.setState({ voltmeterDevice: { x: Math.max(0, Math.min(420, x)), y: Math.max(250, Math.min(350, y)) } });
+        } else if (dragging === 'ammeter') {
+            store.setState({ ammeterDevice: { x: Math.max(0, Math.min(450, x)), y: Math.max(0, Math.min(310, y)) } });
+        }
+    }
+
+    function handleTouchEnd() {
+        if (dragging === 'red' || dragging === 'black') {
+            const state = store.getState();
+            const probe = state.probes[dragging];
+
+            if (isPointOnWire(probe.x, probe.y)) {
+                const newProbes = { ...state.probes };
+                newProbes[dragging] = {
+                    ...probe,
+                    connectedTo: `wire-${Math.round(probe.x)}-${Math.round(probe.y)}`
+                };
+                store.setState({ probes: newProbes });
+            } else {
+                const newProbes = { ...state.probes };
+                newProbes[dragging] = { ...probe, connectedTo: null };
+                store.setState({ probes: newProbes });
+            }
+        }
+
         dragging = null;
     }
     
@@ -526,7 +606,7 @@ function renderCircuit(svg) {
             <rect x="17" y="8" width="6" height="4" fill="hsl(var(--circuit-positive))" rx="1"/>
             <rect x="15" y="55" width="10" height="8" fill="hsl(var(--circuit-negative))" rx="2"/>
             <text x="50" y="35" font-size="14" fill="currentColor" font-weight="600">PİL</text>
-            <text x="50" y="50" font-size="12" fill="#ffffff" font-weight="bold">${state.voltage}V</text>
+            <text x="50" y="50" font-size="12" fill="#000000" font-weight="bold">${state.voltage}V</text>
             <circle cx="20" cy="14" r="10" fill="#dc2626" stroke="white" stroke-width="2"/>
             <text x="20" y="19" font-size="16" fill="white" text-anchor="middle" font-weight="900">+</text>
             <circle cx="20" cy="60" r="10" fill="#1f2937" stroke="white" stroke-width="2"/>
@@ -539,7 +619,7 @@ function renderCircuit(svg) {
                   fill="none" stroke="#8b5a2b" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
             <text x="50" y="45" font-size="14" fill="currentColor" text-anchor="middle" font-weight="bold">${state.resistance}Ω</text>
             <text x="50" y="-25" font-size="12" fill="currentColor" text-anchor="middle" font-weight="600">AYARLI DİRENÇ</text>
-            <text x="50" y="-12" font-size="10" fill="#666" text-anchor="middle">(REOSTA)</text>
+            <text x="50" y="-12" font-size="12" fill="#000000" text-anchor="middle">(REOSTA)</text>
         </g>
         
         <!-- Lamp -->
@@ -567,7 +647,7 @@ function renderCircuit(svg) {
                   stroke="hsl(var(--border))" stroke-width="1"/>
             
             <text x="-60" y="15" font-size="14" fill="currentColor" font-weight="600">LAMBA</text>
-            <text x="-60" y="30" font-size="12" fill="#8b5a2b" font-weight="bold">${LAMP_RESISTANCE}Ω</text>
+            <text x="-60" y="30" font-size="13" fill="#8b5a2b" font-weight="bold">${LAMP_RESISTANCE}Ω</text>
         </g>
         
         <!-- Ammeter -->
