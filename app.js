@@ -1054,8 +1054,8 @@ function updateChart(state, ctx) {
         notes.innerHTML = `
             <h4 class="chart-notes-title">Gözlem Notları</h4>
             <p>• V-I grafiğinde doğrusal bir ilişki görüyorsanız, Ohm Yasası doğrulanmış demektir.</p>
-            <p>• Eğim = R toplam = ${totalResistance}Ω (ayarlı direnç + lamba direnci)</p>
-            <p>• Mavi kesikli çizgi, toplam direnç için teorik V = I × R toplam doğrusunu gösterir.</p>
+            <p>• Eğim = R_toplam = ${totalResistance}Ω (ayarlı direnç + lamba direnci)</p>
+            <p>• Mavi kesikli çizgi, toplam direnç için teorik V = I × R_toplam doğrusunu gösterir.</p>
             ${measurements.length >= 5 ? '<p style="color: var(--primary);">• Yeterli veri topladınız! Şimdi sonuçları analiz edebilirsiniz.</p>' : ''}
         `;
         parent.appendChild(notes);
@@ -1351,8 +1351,8 @@ function initUserGuide() {
                 "• Hazır değerler açılır menüsünden seçilebilir",
                 "",
                 "Hesaplanan Değerler:",
-                "• Anlık akım değeri (I = V / R) gösterilir",
-                "• Eşdeğer direnç değeri (R = V / I) hesaplanır"
+                "• Anlık akım değeri (I = V ÷ R) gösterilir",
+                "• Eşdeğer direnç değeri (R = V ÷ I) hesaplanır"
             ]
         },
         {
