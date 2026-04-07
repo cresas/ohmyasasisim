@@ -1351,8 +1351,8 @@ function initUserGuide() {
                 "• Hazır değerler açılır menüsünden seçilebilir",
                 "",
                 "Hesaplanan Değerler:",
-                "• Anlık akım değeri (I = V ÷ R) gösterilir",
-                "• Eşdeğer direnç değeri (R = V ÷ I) hesaplanır"
+                "• Anlık akım değeri (I = V / R) gösterilir",
+                "• Eşdeğer direnç değeri (R = V / I) hesaplanır"
             ]
         },
         {
