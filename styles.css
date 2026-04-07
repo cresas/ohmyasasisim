@@ -1417,3 +1417,86 @@ body {
     /* EKLEDİĞİN SATIR */
     --gradient-circuit: #272e35;
 }
+
+/* Scroll to Top Button */
+.scroll-top-btn {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s, transform 0.3s;
+    z-index: 1000;
+    box-shadow: var(--shadow-lg);
+}
+
+.scroll-top-btn.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.scroll-top-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg), 0 0 20px var(--primary-glow);
+}
+
+@media (max-width: 768px) {
+    .scroll-top-btn {
+        bottom: 1rem;
+        right: 1rem;
+        width: 44px;
+        height: 44px;
+    }
+}
+
+/* Mobile Circuit Container Fix */
+@media (max-width: 768px) {
+    html, body {
+        overflow-x: hidden;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        position: relative;
+        height: auto;
+        min-height: 100vh;
+    }
+
+    #circuit-container,
+    .circuit-container {
+        touch-action: pan-y !important;
+        -webkit-overflow-scrolling: touch;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
+    .main-content,
+    .col-left,
+    .col-right {
+        touch-action: pan-y;
+        -webkit-overflow-scrolling: touch;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
+    /* SVG text should not be selectable, but SVG container should still allow scrolling */
+    #circuit-container svg {
+        touch-action: pan-y;
+        -webkit-touch-callout: none;
+    }
+
+    #circuit-container svg text,
+    #circuit-container svg textPath {
+        pointer-events: none !important;
+        user-select: none;
+        -webkit-user-select: none;
+    }
+}

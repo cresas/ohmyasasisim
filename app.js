@@ -448,14 +448,17 @@ function initCircuit() {
         if (!dragging) return;
 
         const rect = svg.getBoundingClientRect();
-        const x = (e.clientX - rect.left) * (500 / rect.width);
+        const x = (e.clientX - rect.left) * (470 / rect.width);
         const y = (e.clientY - rect.top) * (350 / rect.height);
 
         const state = store.getState();
 
         if (dragging === 'red' || dragging === 'black') {
             const newProbes = { ...state.probes };
-            newProbes[dragging] = { ...newProbes[dragging], x, y };
+            // Limit probe position to stay within circuit bounds
+            const clampedX = Math.max(50, Math.min(460, x));
+            const clampedY = Math.max(50, Math.min(300, y));
+            newProbes[dragging] = { ...newProbes[dragging], x: clampedX, y: clampedY };
             store.setState({ probes: newProbes });
         } else if (dragging === 'voltmeter') {
             store.setState({ voltmeterDevice: { x: Math.max(0, Math.min(420, x)), y: Math.max(250, Math.min(350, y)) } });
@@ -486,32 +489,48 @@ function initCircuit() {
         dragging = null;
     }
 
-    // Touch event handlers for mobile support
+    // Touch event handlers for mobile support - Improved for better drag experience
     function handleTouchStart(e) {
         if (e.touches.length !== 1) return;
 
         const touch = e.touches[0];
         const rect = svg.getBoundingClientRect();
-        const x = (touch.clientX - rect.left) * (470 / rect.width);
-        const y = (touch.clientY - rect.top) * (350 / rect.height);
+        // Use consistent scaling - the SVG internal dimensions
+        const svgWidth = 470;
+        const svgHeight = 350;
+        const x = (touch.clientX - rect.left) * (svgWidth / rect.width);
+        const y = (touch.clientY - rect.top) * (svgHeight / rect.height);
 
-        // Check if touching a probe
+        // Check if touching a probe - much larger touch targets for mobile (50px for better touch)
         const state = store.getState();
         const redProbe = state.probes.red;
         const blackProbe = state.probes.black;
 
-        if (Math.hypot(x - redProbe.x, y - redProbe.y) < 20) {
+        // Larger touch tolerance for easier grabbing on mobile
+        const probeTouchTolerance = 50;
+        const deviceTouchTolerance = 60;
+
+        if (Math.hypot(x - redProbe.x, y - redProbe.y) < probeTouchTolerance) {
             dragging = 'red';
             e.preventDefault();
-        } else if (Math.hypot(x - blackProbe.x, y - blackProbe.y) < 20) {
+            // Store initial touch position for drag offset calculation
+            dragging.offsetX = x - redProbe.x;
+            dragging.offsetY = y - redProbe.y;
+        } else if (Math.hypot(x - blackProbe.x, y - blackProbe.y) < probeTouchTolerance) {
             dragging = 'black';
             e.preventDefault();
-        } else if (Math.hypot(x - state.voltmeterDevice.x - 40, y - state.voltmeterDevice.y - 25) < 40) {
+            dragging.offsetX = x - blackProbe.x;
+            dragging.offsetY = y - blackProbe.y;
+        } else if (Math.hypot(x - state.voltmeterDevice.x - 40, y - state.voltmeterDevice.y - 25) < deviceTouchTolerance) {
             dragging = 'voltmeter';
             e.preventDefault();
-        } else if (Math.hypot(x - state.ammeterDevice.x - 25, y - state.ammeterDevice.y - 20) < 35) {
+            dragging.offsetX = x - (state.voltmeterDevice.x + 40);
+            dragging.offsetY = y - (state.voltmeterDevice.y + 25);
+        } else if (Math.hypot(x - state.ammeterDevice.x - 25, y - state.ammeterDevice.y - 20) < deviceTouchTolerance) {
             dragging = 'ammeter';
             e.preventDefault();
+            dragging.offsetX = x - (state.ammeterDevice.x + 25);
+            dragging.offsetY = y - (state.ammeterDevice.y + 20);
         }
     }
 
@@ -522,14 +541,20 @@ function initCircuit() {
 
         const touch = e.touches[0];
         const rect = svg.getBoundingClientRect();
-        const x = (touch.clientX - rect.left) * (500 / rect.width);
-        const y = (touch.clientY - rect.top) * (350 / rect.height);
+        // Use consistent scaling with touchstart
+        const svgWidth = 470;
+        const svgHeight = 350;
+        const x = (touch.clientX - rect.left) * (svgWidth / rect.width);
+        const y = (touch.clientY - rect.top) * (svgHeight / rect.height);
 
         const state = store.getState();
 
         if (dragging === 'red' || dragging === 'black') {
             const newProbes = { ...state.probes };
-            newProbes[dragging] = { ...newProbes[dragging], x, y };
+            // Limit probe position to stay within circuit bounds
+            const clampedX = Math.max(50, Math.min(460, x));
+            const clampedY = Math.max(50, Math.min(300, y));
+            newProbes[dragging] = { ...newProbes[dragging], x: clampedX, y: clampedY };
             store.setState({ probes: newProbes });
         } else if (dragging === 'voltmeter') {
             store.setState({ voltmeterDevice: { x: Math.max(0, Math.min(420, x)), y: Math.max(250, Math.min(350, y)) } });
@@ -575,13 +600,22 @@ function renderCircuit(svg) {
     const current = getCurrent(state);
     const voltmeterReading = getVoltmeterReading(state);
     const ammeterReading = isPointOnWire(state.ammeterDevice.x + 25, state.ammeterDevice.y + 20) ? current : 0;
-    
+
     svg.innerHTML = `
         <defs>
             <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
                 <feDropShadow dx="2" dy="2" stdDeviation="3" flood-opacity="0.3"/>
             </filter>
         </defs>
+        <style>
+            #circuit-container svg text,
+            #circuit-container svg textPath {
+                pointer-events: none;
+                user-select: none;
+                -webkit-user-select: none;
+                -webkit-touch-callout: none;
+            }
+        </style>
         
         <!-- Circuit wires -->
         <g>
@@ -1503,4 +1537,39 @@ document.addEventListener('DOMContentLoaded', () => {
     initStudentNotes();
     initUserGuide();
     initThemeToggle();
+    initScrollToTop();
 });
+
+// ============================================================================
+// Scroll to Top Button
+// ============================================================================
+
+function initScrollToTop() {
+    const scrollBtn = document.getElementById('scrollTopBtn');
+    if (!scrollBtn) return;
+
+    // Show/hide button based on scroll position
+    function toggleScrollButton() {
+        if (window.scrollY > 300) {
+            scrollBtn.classList.add('visible');
+        } else {
+            scrollBtn.classList.remove('visible');
+        }
+    }
+
+    // Scroll to top when button is clicked
+    scrollBtn.addEventListener('click', () => {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    });
+
+    // Listen for scroll events
+    window.addEventListener('scroll', toggleScrollButton);
+
+    // Initial check
+    toggleScrollButton();
+
+    console.log('Scroll to top button initialized');
+}
