@@ -36,6 +36,11 @@ function createStore(initialState) {
 
 const LAMP_RESISTANCE = 8;
 
+// Undo history stack
+const MAX_HISTORY = 50;
+let historyStack = [];
+let isUndoAction = false;
+
 const store = createStore({
     voltage: 5,
     resistance: 10,
@@ -50,6 +55,50 @@ const store = createStore({
     notes: '',
     savedNotes: '',
     lastSaved: null
+});
+
+// Proplar ve cihazlar değiştiğinde history'ye kaydet
+const originalSetState = store.setState.bind(store);
+store.setState = function(partial) {
+    if (isUndoAction) {
+        originalSetState(partial);
+        return;
+    }
+
+    const currentState = store.getState();
+
+    // Sadece probe ve device pozisyonları için history tut
+    if (partial.probes || partial.voltmeterDevice || partial.ammeterDevice) {
+        historyStack.push(JSON.stringify(currentState));
+        if (historyStack.length > MAX_HISTORY) {
+            historyStack.shift();
+        }
+    }
+
+    originalSetState(partial);
+};
+
+// Undo fonksiyonu
+function undoLastAction() {
+    if (historyStack.length === 0) {
+        showToast('Geri alınacak işlem yok', 'info');
+        return false;
+    }
+
+    const previousState = JSON.parse(historyStack.pop());
+    isUndoAction = true;
+    store.setState(previousState);
+    isUndoAction = false;
+    showToast('Son işlem geri alındı', 'success');
+    return true;
+}
+
+// Ctrl+Z kısayolu
+document.addEventListener('keydown', function(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        e.preventDefault();
+        undoLastAction();
+    }
 });
 
 // ============================================================================
@@ -121,25 +170,25 @@ function getVoltmeterReading(state) {
 
 function isPointOnWire(x, y) {
     const tolerance = 30;
-    
-    // Upper wire
-    if (y >= 80 - tolerance && y <= 150 && x >= 80 && x <= 500) return true;
-    
-    // Right wire
-    if (x >= 440 - tolerance && x <= 440 + tolerance && y >= 80 && y <= 280) return true;
-    
-    // Bottom wire
-    if (y >= 270 - tolerance && y <= 270 + tolerance && x >= 80 && x <= 420) return true;
-    
-    // Left wire
-    if (x >= 60 - tolerance && x <= 60 + tolerance && y >= 100 && y <= 250) return true;
-    
-    // Lamp area
-    if (x >= 380 && x <= 500 && y >= 80 && y <= 280) return true;
-    
+
+    // Upper wire - genişletilmiş: y >= 55 && y <= 165
+    if (y >= 55 && y <= 165 && x >= 80 && x <= 500) return true;
+
+    // Right wire - genişletilmiş: x >= 435 && x <= 455
+    if (x >= 435 && x <= 455 && y >= 55 && y <= 285) return true;
+
+    // Bottom wire - genişletilmiş: y >= 260 && y <= 285
+    if (y >= 260 && y <= 285 && x >= 80 && x <= 420) return true;
+
+    // Left wire - genişletilmiş: x >= 50 && x <= 75
+    if (x >= 50 && x <= 75 && y >= 55 && y <= 285) return true;
+
+    // Lamp area - genişletilmiş: y >= 70 && y <= 290
+    if (x >= 380 && x <= 500 && y >= 70 && y <= 290) return true;
+
     // Bridge area
-    if (x >= 400 && x <= 450 && y >= 80 && y <= 160) return true;
-    
+    if (x >= 400 && x <= 450 && y >= 55 && y <= 165) return true;
+
     return false;
 }
 
@@ -424,21 +473,21 @@ function initCircuit() {
         const x = (e.clientX - rect.left) * (470 / rect.width);
         const y = (e.clientY - rect.top) * (350 / rect.height);
 
-        // Check if clicking on a probe
+        // Check if clicking on a probe - algılama mesafesi 25'e çıkarıldı
         const state = store.getState();
         const redProbe = state.probes.red;
         const blackProbe = state.probes.black;
 
-        if (Math.hypot(x - redProbe.x, y - redProbe.y) < 15) {
+        if (Math.hypot(x - redProbe.x, y - redProbe.y) < 55) {
             dragging = 'red';
             e.preventDefault();
-        } else if (Math.hypot(x - blackProbe.x, y - blackProbe.y) < 15) {
+        } else if (Math.hypot(x - blackProbe.x, y - blackProbe.y) < 55) {
             dragging = 'black';
             e.preventDefault();
-        } else if (Math.hypot(x - state.voltmeterDevice.x - 40, y - state.voltmeterDevice.y - 25) < 30) {
+        } else if (Math.hypot(x - state.voltmeterDevice.x - 40, y - state.voltmeterDevice.y - 55) < 30) {
             dragging = 'voltmeter';
             e.preventDefault();
-        } else if (Math.hypot(x - state.ammeterDevice.x - 25, y - state.ammeterDevice.y - 20) < 25) {
+        } else if (Math.hypot(x - state.ammeterDevice.x - 55, y - state.ammeterDevice.y - 20) < 55) {
             dragging = 'ammeter';
             e.preventDefault();
         }
@@ -456,13 +505,16 @@ function initCircuit() {
         if (dragging === 'red' || dragging === 'black') {
             const newProbes = { ...state.probes };
             // Limit probe position to stay within circuit bounds
+            // X: 50-460 (left-right boundary), Y: 60-310 (up-down boundary)
             const clampedX = Math.max(50, Math.min(460, x));
-            const clampedY = Math.max(50, Math.min(300, y));
+            const clampedY = Math.max(80, Math.min(285, y));
             newProbes[dragging] = { ...newProbes[dragging], x: clampedX, y: clampedY };
             store.setState({ probes: newProbes });
         } else if (dragging === 'voltmeter') {
-            store.setState({ voltmeterDevice: { x: Math.max(0, Math.min(420, x)), y: Math.max(250, Math.min(350, y)) } });
+            // Voltmetre sınırları: X: 0-420, Y: 250-330
+            store.setState({ voltmeterDevice: { x: Math.max(0, Math.min(420, x)), y: Math.max(250, Math.min(330, y)) } });
         } else if (dragging === 'ammeter') {
+            // Ampermetre sınırları: X: 0-450, Y: 0-310
             store.setState({ ammeterDevice: { x: Math.max(0, Math.min(450, x)), y: Math.max(0, Math.min(310, y)) } });
         }
     }
@@ -552,13 +604,16 @@ function initCircuit() {
         if (dragging === 'red' || dragging === 'black') {
             const newProbes = { ...state.probes };
             // Limit probe position to stay within circuit bounds
+            // X: 50-460 (left-right boundary), Y: 60-310 (up-down boundary)
             const clampedX = Math.max(50, Math.min(460, x));
-            const clampedY = Math.max(50, Math.min(300, y));
+            const clampedY = Math.max(80, Math.min(285, y));
             newProbes[dragging] = { ...newProbes[dragging], x: clampedX, y: clampedY };
             store.setState({ probes: newProbes });
         } else if (dragging === 'voltmeter') {
-            store.setState({ voltmeterDevice: { x: Math.max(0, Math.min(420, x)), y: Math.max(250, Math.min(350, y)) } });
+            // Voltmetre sınırları: X: 0-420, Y: 250-330
+            store.setState({ voltmeterDevice: { x: Math.max(0, Math.min(420, x)), y: Math.max(250, Math.min(330, y)) } });
         } else if (dragging === 'ammeter') {
+            // Ampermetre sınırları: X: 0-450, Y: 0-310
             store.setState({ ammeterDevice: { x: Math.max(0, Math.min(450, x)), y: Math.max(0, Math.min(310, y)) } });
         }
     }
